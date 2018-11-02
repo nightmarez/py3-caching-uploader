@@ -4,6 +4,7 @@ from pathlib import Path
 import paramiko
 from paramiko import SSHClient
 from scp import SCPClient
+import hashlib
 
 SERVER_IP = "192.168.0.1"
 SERVER_USERNAME = "root"
@@ -11,6 +12,15 @@ SERVER_PASSWORD = "toor"
 SERVER_DIRECTORY = '/var/www/html'
 CACHE_FILES = "uploader-cache-files.txt"
 CACHE_DIRS = "uploader-cache-dirs.txt"
+
+def md5(name: str) -> str:
+	hash_md5 = hashlib.md5()
+
+	with open(name, "rb") as f:
+		for chunk in iter(lambda: f.read(4096), b""):
+			hash_md5.update(chunk)
+
+	return hash_md5.hexdigest()
 
 def check_file_changes(name: str) -> bool:
 	my_file = Path(CACHE_FILES)
@@ -33,27 +43,28 @@ def check_file_changes(name: str) -> bool:
 
 	need_load = False
 	found = False
+	curr_hash = False
 
 	f = open(CACHE_FILES, "w")
 	for line in lines:
 		pair = line.split('|')
 		file_name = pair[0]
-		file_size = int(pair[1])
-		statinfo = os.stat(file_name)
+		file_hash = pair[1].strip()
 
 		if file_name == name:
 			found = True
+			curr_hash = md5(file_name)
 
-			if statinfo.st_size != file_size:
-				line = file_name + '|' + str(statinfo.st_size) + '\r\n'
+			if curr_hash != file_hash:
+				line = file_name + '|' + curr_hash + '\r\n'
 				need_load = True
 
 		f.write(line)
 
 	if not found:
 		need_load = True
-		statinfo = os.stat(name)
-		line = name + '|' + str(statinfo.st_size) + '\r\n'
+		urr_hash = md5(file_name)
+		line = name + '|' + curr_hash + '\r\n'
 		f.write(line)
 
 	f.close()
