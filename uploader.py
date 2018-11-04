@@ -63,7 +63,7 @@ def check_file_changes(name: str) -> bool:
 
 	if not found:
 		need_load = True
-		urr_hash = md5(file_name)
+		curr_hash = md5(name)
 		line = name + '|' + curr_hash + '\r\n'
 		f.write(line)
 
