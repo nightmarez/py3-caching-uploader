@@ -5,13 +5,7 @@ import paramiko
 from paramiko import SSHClient
 from scp import SCPClient
 import hashlib
-
-SERVER_IP = "192.168.0.1"
-SERVER_USERNAME = "root"
-SERVER_PASSWORD = "toor"
-SERVER_DIRECTORY = '/var/www/html'
-CACHE_FILES = "uploader-cache-files.txt"
-CACHE_DIRS = "uploader-cache-dirs.txt"
+import json
 
 def md5(name: str) -> str:
 	hash_md5 = hashlib.md5()
@@ -104,13 +98,10 @@ def need_create_dir(name: str) -> bool:
 	return not found
 
 def need_upload_file(name: str) -> bool:
-	if name == '.htaccess':
-		return True
-
 	ext = name.split('.')
 	ext = ext[len(ext) - 1]
 
-	if ext in ['php', 'css', 'js', 'png', 'jpg', 'gif', 'sql']:
+	if ext in ['php', 'css', 'js', 'png', 'jpg', 'gif', 'sql', 'svg', 'htaccess', 'txt', 'xml']:
 		return True
 
 	return False
@@ -122,7 +113,7 @@ def upload_file(name: str, path: str, scp: SCPClient):
 	else:
 		print("File '" + name + "' skip")
 
-def upload_directory(name: str, ssh: SSHClient, scp: SCPClient):
+def upload_directory(name: str, ssh: SSHClient, scp: SCPClient, recursive: bool = True):
 	print("Observe '" + name + "' directory...")
 
 	if name != '.' and need_create_dir(name):
@@ -133,19 +124,74 @@ def upload_directory(name: str, ssh: SSHClient, scp: SCPClient):
 		if need_upload_file(f):
 			upload_file(name + '/' + f, SERVER_DIRECTORY + '/' + name, scp)
 
-	dirs = [d for d in os.listdir(name) if os.path.isdir(name + '/' + d)]
-	for d in dirs:
-		if d not in ['.', '..', '.git', '__pycache__']:
-			upload_directory(name + '/' + d, ssh, scp)
+	if recursive:
+		dirs = [d for d in os.listdir(name) if os.path.isdir(name + '/' + d)]
+		for d in dirs:
+			if d not in ['.', '..', '.git', '__pycache__']:
+				upload_directory(name + '/' + d, ssh, scp)
 
-def upload():
+def load_config_rules(data, ssh: SSHClient, scp: SCPClient):
+	directories_rules = data['directories']
+
+	for directory_rule in directories_rules:
+		directory_path = directory_rule[0]
+		is_recursive = directory_rule[1] if len(directory_rule) > 1 else True
+		upload_directory(directory_path, ssh, scp, is_recursive)
+
+	files_rules = data['files']
+
+	for file_rule in files_rules:
+		file_name = file_rule[0]
+		destination_path = file_rule[1] if len(file_rule) > 1 else '.'
+		upload_file(file_name, destination_path, scp)
+
+def load_config_cache(data):
+	global CACHE_FILES
+	global CACHE_DIRS
+
+	CACHE_FILES = data['directories']
+	CACHE_DIRS = data['files']
+
+def load_config_server(data):
+	global SERVER_IP
+	global SERVER_USERNAME
+	global SERVER_PASSWORD
+	global SERVER_DIRECTORY
+
+	SERVER_IP = data['ip']
+	SERVER_USERNAME = data['user']
+	SERVER_PASSWORD = data['pass']
+	SERVER_DIRECTORY = data['directory']
+
+def load_config(before, after):
+	with open('uploader-config.json', 'r') as file:
+		data = json.loads(file.read())
+		server_data = data['server']
+		cache_data = data['cache']
+		rules_data = data['rules']
+
+		load_config_server(server_data)
+		load_config_cache(cache_data)
+		(ssh, scp) = before()
+
+		try:
+			load_config_rules(rules_data, ssh, scp)
+		finally:
+			after(ssh, scp)
+
+def init_ssh():
 	ssh = SSHClient()
 	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 	ssh.connect(SERVER_IP, 22, SERVER_USERNAME, SERVER_PASSWORD)
 	scp = SCPClient(ssh.get_transport())
-	upload_directory('app', ssh, scp)
+	return (ssh, scp)
+
+def close_ssh(ssh: SSHClient, scp: SCPClient):
 	scp.close()
 	ssh.close()
+
+def upload():
+	load_config(init_ssh, close_ssh)
 
 if __name__ == "__main__":
 	upload()

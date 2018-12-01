@@ -1,0 +1,23 @@
+{
+	"server": {
+		"ip": "127.0.0.1",
+		"user": "root",
+		"pass": "toor",
+		"directory": "/var/www/html"
+	},
+	"cache": {
+		"directories": "uploader-cache-dirs.txt",
+		"files": "uploader-cache-files.txt"
+	},
+	"rules": {
+		"directories": [
+			["app", true],
+			["framework"],
+			[".", false]
+		],
+		"files": [
+			["index.php", "."],
+			["robots.txt"]
+		]
+	}
+}
