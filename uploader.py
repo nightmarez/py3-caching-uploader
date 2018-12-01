@@ -1,4 +1,13 @@
-# -*- coding: utf-8 -*-
+# uploader.py
+# Copyright (C) 2018 Mikhail Makarov <m.m.makarov@gmail.com>
+# Welcome to my site https://russiancoders.tech
+
+"""
+Utility for uploading files and directories over ssh using the scp1 protocol.
+"""
+
+__version__ = '0.1.0'
+
 import os
 from pathlib import Path
 import paramiko
