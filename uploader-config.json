@@ -18,6 +18,8 @@
 		"files": [
 			["index.php", "."],
 			["robots.txt"]
-		]
+		],
+		"extensions": ["php", "css", "js"],
+		"disallowed": [".git"]
 	}
 }

@@ -101,7 +101,7 @@ def need_upload_file(name: str) -> bool:
 	ext = name.split('.')
 	ext = ext[len(ext) - 1]
 
-	if ext in ['php', 'css', 'js', 'png', 'jpg', 'gif', 'sql', 'svg', 'htaccess', 'txt', 'xml']:
+	if ext in ALLOWED_EXTENSIONS:
 		return True
 
 	return False
@@ -127,10 +127,16 @@ def upload_directory(name: str, ssh: SSHClient, scp: SCPClient, recursive: bool 
 	if recursive:
 		dirs = [d for d in os.listdir(name) if os.path.isdir(name + '/' + d)]
 		for d in dirs:
-			if d not in ['.', '..', '.git', '__pycache__']:
+			if d not in ['.', '..', '__pycache__'] and d not in DISALLOWED_DIRECTORIES:
 				upload_directory(name + '/' + d, ssh, scp)
 
 def load_config_rules(data, ssh: SSHClient, scp: SCPClient):
+	global ALLOWED_EXTENSIONS
+	ALLOWED_EXTENSIONS = data['extensions']
+
+	global DISALLOWED_DIRECTORIES
+	DISALLOWED_DIRECTORIES = data['disallowed']
+
 	directories_rules = data['directories']
 
 	for directory_rule in directories_rules:
