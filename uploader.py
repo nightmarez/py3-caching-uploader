@@ -1,6 +1,5 @@
 # uploader.py
-# Copyright (C) 2018 Mikhail Makarov <m.m.makarov@gmail.com>
-# Welcome to my site https://russiancoders.dev/about/
+# Copyright (C) 2018-2022 Mikhail Makarov <m.m.makarov@gmail.com>
 
 """
 Utility for uploading files and directories over ssh using the scp1 protocol.
